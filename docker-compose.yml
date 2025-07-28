@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bot
+    container_name: ai-outfit-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GPU_SERVER_URL=http://gpu-server:7860
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./temp:/app/temp
+    depends_on:
+      - gpu-server
+    networks:
+      - ai-outfit-network
+
+  gpu-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+    container_name: ai-outfit-gpu
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./models:/app/models
+    networks:
+      - ai-outfit-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  ai-outfit-network:
+    driver: bridge
+
+volumes:
+  models:
